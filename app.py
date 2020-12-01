@@ -4,6 +4,15 @@ from datetime import datetime
 from datetime import date
 import imutils
 import time
+import os, os.path
+from azure.storage.blob import ContainerClient
+from azure.storage.blob import BlobClient
+
+CONNECT_STR = "DefaultEndpointsProtocol=https;AccountName=aqmal;AccountKey=o04SwW/Es5ZlxkVxGZ/lFeljxtq1Yv8u7tydM58P8FhfvLo4U58x5oH/HfvQAPea4aJVdhxZ39ywV6kYAuT/mw==;EndpointSuffix=core.windows.net"
+CONTAINER_NAME = "blobtest"
+
+container_client = ContainerClient.from_connection_string(conn_str=CONNECT_STR, container_name=CONTAINER_NAME)
+
 faceDetect = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 camera = cv2.VideoCapture(0)
 trigger = False
@@ -14,11 +23,10 @@ while(True):
     _,frame = camera.read()
     triggerPrev = trigger
     gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-    faces = faceDetect.detectMultiScale(gray,1.1,5)
+    faces = faceDetect.detectMultiScale(gray,1.2,5)
 
     if faces!=():
         trigger = True
-        iterate += 1
     else:
         trigger = False
 
@@ -26,6 +34,7 @@ while(True):
         startTime = datetime.now()
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         filename = "video/{}_{}.avi".format(startTime.strftime('%A'),iterate)
+        file_blob = "{}_{}.avi".format(startTime.strftime('%A'),iterate)
         writer = cv2.VideoWriter(filename,fourcc,20,(640,480))
     elif triggerPrev:
         timeDiff = (datetime.now() - startTime).seconds
@@ -42,7 +51,6 @@ while(True):
 				# set the notification sent flag
 				# tn.send(msg, tempVideo)
                 notifSent = True
-                print(notifSent)
         if not trigger:
             # if a notification has already been sent, then just set 
 			# the notifSent to false for the next iteration
@@ -56,11 +64,13 @@ while(True):
                 dateOpened = date.today().strftime("%A, %B %d %Y")
                 # build the message and send a notification
                 if totalSeconds>=3:
-                    msg = "Your fridge was opened on {} at {} " \
+                    msg = "Someone is looking at your door {} at {} " \
                             "for {} seconds.".format(dateOpened,startTime.strftime("%I:%M%p"), totalSeconds)
+                    iterate += 1
                     writer.release()
                     writer = None
                     # tn.send(msg, tempVideo)
+                    
                     print(msg)
     if writer is not None:
         writer.write(frame)
@@ -75,5 +85,21 @@ while(True):
 # check to see if we need to release the video writer pointer
 if writer is not None:
     writer.release()
+
+if iterate!=0:
+    file_list = os.listdir('video/')
+    for i in range(len(file_list)):
+        input_file_path = 'video/{}'.format(file_list[i])
+        output_blob_name = file_list[i]
+        blob = BlobClient.from_connection_string(conn_str=CONNECT_STR, container_name=CONTAINER_NAME, blob_name=output_blob_name)
+        exists = blob.exists()
+        if exists:
+            print("File already exist!")
+        else:
+            with open(input_file_path, "rb") as data:
+                container_client.upload_blob(name=output_blob_name, data=data)
+            print("Upload file",i,",Succsess")
+
+
 camera.release()
 cv2.destroyAllWindows()
