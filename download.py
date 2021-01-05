@@ -2,7 +2,7 @@ import os, os.path
 from azure.storage.blob import ContainerClient
 from azure.storage.blob import BlobClient
 
-CONNECT_STR = "DefaultEndpointsProtocol=https;AccountName=aqmal;AccountKey=o04SwW/Es5ZlxkVxGZ/lFeljxtq1Yv8u7tydM58P8FhfvLo4U58x5oH/HfvQAPea4aJVdhxZ39ywV6kYAuT/mw==;EndpointSuffix=core.windows.net"
+CONNECT_STR = ""
 CONTAINER_NAME = "blobtest"
 
 container_client = ContainerClient.from_connection_string(conn_str=CONNECT_STR, container_name=CONTAINER_NAME)
